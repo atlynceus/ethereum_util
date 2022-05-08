@@ -7,20 +7,30 @@ part of 'typed_data.dart';
 // **************************************************************************
 
 TypedData _$TypedDataFromJson(Map<String, dynamic> json) {
+
+  var types;
+  if(json['types'] != null) {
+    types = (json['types'] as Map<String, dynamic>).map(
+    (k, e) => MapEntry(
+        k,
+        (e as List)
+            .map((e) => e == null
+                ? null
+                : TypedDataField.fromJson(e as Map<String, dynamic>))
+            .toList()),
+    );
+  }
+
+
+  var domain;
+  if(json['domain'] != null) {
+    domain = EIP712Domain.fromJson(json['domain'] as Map<String, dynamic>);
+  }
+
   return TypedData(
-      types: (json['types'] as Map<String, dynamic>)?.map(
-        (k, e) => MapEntry(
-            k,
-            (e as List)
-                ?.map((e) => e == null
-                    ? null
-                    : TypedDataField.fromJson(e as Map<String, dynamic>))
-                ?.toList()),
-      ),
+      types: types,
       primaryType: json['primaryType'] as String,
-      domain: json['domain'] == null
-          ? null
-          : EIP712Domain.fromJson(json['domain'] as Map<String, dynamic>),
+      domain: domain,
       message: json['message'] as Map<String, dynamic>);
 }
 

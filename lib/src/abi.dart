@@ -29,7 +29,7 @@ Uint8List rawEncode(List<String> types, values) {
       var size = parseTypeArray(type);
 
       if (size != 'dynamic') {
-        headLength += 32 * size;
+        headLength += 32 * size as int;
       } else {
         headLength += 32;
       }
@@ -58,12 +58,13 @@ Uint8List rawEncode(List<String> types, values) {
 }
 
 Uint8List encodeSingle(String type, dynamic arg) {
-  var size, i;
+  // print("encodeSingle type[" + type + "][" + arg.toString()+"]");
+  var size;
 
   if (type == 'address') {
     return encodeSingle('uint160', parseNumber(arg));
   } else if (type == 'bool') {
-    int val;
+    int? val = null;
     if (arg is int) {
       val = arg == 0 ? 0 : 1;
     } else if (arg is bool) {
@@ -87,7 +88,7 @@ Uint8List encodeSingle(String type, dynamic arg) {
     var ret = BytesBuffer();
     type = type.substring(0, type.lastIndexOf('['));
     if (arg is String) {
-      arg = jsonDecode(arg);
+      arg = jsonDecode(arg as String);
     }
 
     if (size == 'dynamic') {
@@ -106,7 +107,7 @@ Uint8List encodeSingle(String type, dynamic arg) {
     ret.add(arg);
 
     if ((arg.length % 32) != 0) {
-      ret.add(zeros(32 - (arg.length % 32)));
+      ret.add(zeros(32 - (arg.length % 32) as int));
     }
 
     return ret.toBytes();
@@ -120,7 +121,7 @@ Uint8List encodeSingle(String type, dynamic arg) {
   } else if (type.startsWith('uint')) {
     size = parseTypeN(type);
     if ((size % 8 > 0) || (size < 8) || (size > 256)) {
-      throw new ArgumentError('Invalid uint<N> width: ${size}');
+      throw new ArgumentError('Invalid uint<N> width: ${size} ${type}');
     }
 
     var num = parseNumber(arg);
@@ -188,16 +189,27 @@ String elementaryName(String name) {
 }
 
 /// Parse N from type<N>
-int parseTypeN(String type) {
-  return int.parse(RegExp(r'^\D+(\d+)$').firstMatch(type).group(1), radix: 10);
+int? parseTypeN(String type) {
+  String? match = RegExp(r'^\D+(\d+)$').firstMatch(type)?.group(1);
+  if(match != null) {
+    return int.parse(match, radix: 10);
+  }
+  return null;
+}
+
+String OriginalStringOrEmpty(dynamic what) {
+  if(what != null) {
+    return what;
+  }
+  return "";
 }
 
 /// Parse N,M from type<N>x<M>
 List<int> parseTypeNxM(String type) {
   var tmp = RegExp(r'^\D+(\d+)x(\d+)$').firstMatch(type);
   return [
-    int.parse(tmp.group(1), radix: 10),
-    int.parse(tmp.group(2), radix: 10)
+    int.parse(OriginalStringOrEmpty(tmp?.group(1)), radix: 10),
+    int.parse(OriginalStringOrEmpty(tmp?.group(2)), radix: 10)
   ];
 }
 
@@ -205,7 +217,7 @@ List<int> parseTypeNxM(String type) {
 dynamic parseTypeArray(String type) {
   var tmp = RegExp(r'(.*)\[(.*?)\]$').firstMatch(type);
   if (tmp != null) {
-    return tmp.group(2) == '' ? 'dynamic' : int.parse(tmp.group(2), radix: 10);
+    return tmp.group(2) == '' ? 'dynamic' : int.parse(OriginalStringOrEmpty(tmp.group(2)), radix: 10);
   }
   return null;
 }

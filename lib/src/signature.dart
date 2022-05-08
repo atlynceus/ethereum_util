@@ -46,7 +46,7 @@ Uint8List sha3(Uint8List input) {
 
 /// Generates a new private key using the random instance provided. Please make
 /// sure you're using a cryptographically secure generator.
-BigInt generateNewPrivateKey(Random random) {
+BigInt? generateNewPrivateKey(Random random) {
   final generator = ECKeyGenerator();
 
   final keyParams = ECKeyGeneratorParameters(params);
@@ -55,6 +55,7 @@ BigInt generateNewPrivateKey(Random random) {
 
   final key = generator.generateKeyPair();
   final privateKey = key.privateKey as ECPrivateKey;
+
   return privateKey.d;
 }
 
@@ -65,7 +66,11 @@ Uint8List privateKeyToPublicKey(Uint8List privateKey) {
   final p = params.G * privateKeyNum;
 
   //skip the type flag, https://github.com/ethereumjs/ethereumjs-util/blob/master/index.js#L319
-  return Uint8List.view(p.getEncoded(false).buffer, 1);
+  if(p != null) {
+    return Uint8List.view(p.getEncoded(false).buffer, 1);
+  }
+  // TODO: ???
+  return Uint8List.view(new Uint8List(0) as ByteBuffer, 1);
 }
 
 /// Constructs the Ethereum address associated with the given public key by
@@ -83,7 +88,7 @@ Uint8List privateKeyToAddress(Uint8List privateKey) {
 
 /// Signs the hashed data in [message] using the given private key.
 ECDSASignature sign(Uint8List message, Uint8List privateKey,
-    {int chainId = null}) {
+    {int chainId = 0}) {
   final digest = SHA256Digest();
   final signer = ECDSASigner(null, HMac(digest, 64));
   final key = ECPrivateKey(decodeBigInt(privateKey), params);
@@ -125,12 +130,12 @@ ECDSASignature sign(Uint8List message, Uint8List privateKey,
   return ECDSASignature(
     sig.r,
     sig.s,
-    chainId != null ? recoveryId + (chainId * 2 + 35) : recoveryId + 27,
+    chainId != 0 ? recoveryId + (chainId * 2 + 35) : recoveryId + 27,
   );
 }
 
 bool isValidSignature(BigInt r, BigInt s, int v,
-    {bool homesteadOrLater = true, int chainId = null}) {
+    {bool homesteadOrLater = true, int chainId = 0}) {
   var SECP256K1_N_DIV_2 = decodeBigInt(hex.decode(
       '7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0'));
   var SECP256K1_N = decodeBigInt(hex.decode(
@@ -160,7 +165,7 @@ bool isValidSignature(BigInt r, BigInt s, int v,
 }
 
 Uint8List recoverPublicKeyFromSignature(ECDSASignature sig, Uint8List message,
-    {int chainId = null}) {
+    {int chainId = 0}) {
   int recoveryId = _calculateSigRecovery(sig.v, chainId: chainId);
   if (!_isValidSigRecovery(recoveryId)) {
     throw ArgumentError("invalid signature v value");
@@ -183,33 +188,50 @@ Uint8List _recoverPublicKeyFromSignature(
   final prime = BigInt.parse(
       'fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f',
       radix: 16);
-  if (x.compareTo(prime) >= 0) return null;
+  if (x.compareTo(prime) >= 0) return new Uint8List(0);
 
   final R = _decompressKey(x, (recId & 1) == 1, params.curve);
-  if (!(R * n).isInfinity) return null;
+  Uint8List bytes = new Uint8List(0);
 
-  final e = decodeBigInt(message);
+  if(R != null) {
+    var rMulN = (R * n);
+    if( rMulN != null) {
+      if (!rMulN.isInfinity) return new Uint8List(0);
+    }
 
-  final eInv = (BigInt.zero - e) % n;
-  final rInv = r.modInverse(n);
-  final srInv = (rInv * s) % n;
-  final eInvrInv = (rInv * eInv) % n;
+    final e = decodeBigInt(message);
 
-  final q = (params.G * eInvrInv) + (R * srInv);
+    final eInv = (BigInt.zero - e) % n;
+    final rInv = r.modInverse(n);
+    final srInv = (rInv * s) % n;
+    final eInvrInv = (rInv * eInv) % n;
 
-  final bytes = q.getEncoded(false);
+    final ECPoint? gMuleInvrInv = params.G * eInvrInv;
+    final ECPoint? RMulsrInv = R * srInv;
+    ECPoint q;
+
+    if(gMuleInvrInv != null) {
+      ECPoint? added = gMuleInvrInv + RMulsrInv;
+      if(added != null) {
+        q = added;
+        bytes = q.getEncoded(false);
+      }
+    }
+
+  }
   return bytes.sublist(1);
+
 }
 
-int _calculateSigRecovery(int v, {int chainId = null}) {
-  return chainId != null ? v - (2 * chainId + 35) : v - 27;
+int _calculateSigRecovery(int v, {int chainId = 0}) {
+  return chainId != 0 ? v - (2 * chainId + 35) : v - 27;
 }
 
 bool _isValidSigRecovery(int recoveryId) {
   return recoveryId == 0 || recoveryId == 1;
 }
 
-ECPoint _decompressKey(BigInt xBN, bool yBit, ECCurve c) {
+ECPoint? _decompressKey(BigInt xBN, bool yBit, ECCurve c) {
   List<int> x9IntegerToBytes(BigInt s, int qLength) {
     //https://github.com/bcgit/bc-java/blob/master/core/src/main/java/org/bouncycastle/asn1/x9/X9IntegerConverter.java#L45
     final bytes = encodeBigInt(s);
@@ -232,7 +254,11 @@ ECPoint _decompressKey(BigInt xBN, bool yBit, ECCurve c) {
 
   final compEnc = x9IntegerToBytes(xBN, 1 + ((c.fieldSize + 7) ~/ 8));
   compEnc[0] = yBit ? 0x03 : 0x02;
-  return c.decodePoint(compEnc);
+
+  var decodePoint = c.decodePoint(compEnc);
+  if(decodePoint != null) {
+    return decodePoint;
+  }
 }
 
 ///
@@ -253,7 +279,7 @@ Uint8List hashPersonalMessage(dynamic message) {
 ///
 /// Convert signature parameters into the format of `eth_sign` RPC method.
 ///
-String toRpcSig(BigInt r, BigInt s, int v, {int chainId = null}) {
+String toRpcSig(BigInt r, BigInt s, int v, {int chainId = 0}) {
   var recovery = _calculateSigRecovery(v, chainId: chainId);
   if (!_isValidSigRecovery(recovery)) {
     throw ArgumentError('Invalid signature v value');

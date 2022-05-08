@@ -7,7 +7,7 @@ import 'package:ethereum_util/src/abi.dart' as ethAbi;
 import 'package:ethereum_util/src/bytes.dart';
 import 'package:ethereum_util/src/signature.dart';
 import 'package:ethereum_util/src/utils.dart';
-import 'package:json_schema/json_schema.dart';
+import 'package:json_schema2/json_schema2.dart';
 import 'package:meta/meta.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -49,7 +49,7 @@ String _padWithZeroes(String number, int length) {
 
 String normalize(dynamic input) {
   if (input == null) {
-    return null;
+    return "";
   }
 
   if (!(input is String) && !(input is int)) {
@@ -65,10 +65,10 @@ String normalize(dynamic input) {
 }
 
 class MsgParams {
-  TypedData data;
-  String sig;
+  late TypedData data;
+  late String sig;
 
-  MsgParams({this.data, this.sig});
+  MsgParams({required this.data, this.sig = ""});
 
   Uint8List recoverPublicKey() {
     var sigParams = fromRpcSig(sig);
@@ -85,7 +85,7 @@ class TypedData {
   EIP712Domain domain;
   Map<String, dynamic> message;
 
-  TypedData({this.types, this.primaryType, this.domain, this.message});
+  TypedData({required this.types, required this.primaryType, required this.domain, required this.message});
 
   factory TypedData.fromJson(Map<String, dynamic> json) =>
       _$TypedDataFromJson(json);
@@ -99,7 +99,7 @@ class TypedDataField {
   String name;
   String type;
 
-  TypedDataField({@required this.name, @required this.type});
+  TypedDataField({required this.name, required this.type});
 
   factory TypedDataField.fromJson(Map<String, dynamic> json) =>
       _$TypedDataFieldFromJson(json);
@@ -115,7 +115,7 @@ class EIP712Domain {
   int chainId;
   String verifyingContract;
 
-  EIP712Domain({this.name, this.version, this.chainId, this.verifyingContract});
+  EIP712Domain({required this.name, required this.version, required this.chainId, required this.verifyingContract});
 
   dynamic operator [](String key) {
     switch (key) {
@@ -166,12 +166,12 @@ class TypedDataUtils {
       throw ArgumentError("Unsupported data type");
     }
 
-    var encodedTypes = List<String>();
+    var encodedTypes = <String>[]; // List<String>();
     encodedTypes.add('bytes32');
-    var encodedValues = List<dynamic>();
+    var encodedValues = <dynamic>[]; // List<dynamic>();
     encodedValues.add(hashType(primaryType, types));
 
-    types[primaryType].forEach((TypedDataField field) {
+    types[primaryType]?.forEach((TypedDataField field) {
       var value = data[field.name];
       if (value != null) {
         if (field.type == 'bytes') {
@@ -207,7 +207,7 @@ class TypedDataUtils {
   static String encodeType(
       String primaryType, Map<String, List<TypedDataField>> types) {
     var result = '';
-    var deps = findTypeDependencies(primaryType, types);
+    var deps = findTypeDependencies(primaryType, types, <String>[]);
     deps = deps.where((dep) => dep != primaryType).toList();
     deps.sort();
     deps.insert(0, primaryType);
@@ -215,10 +215,11 @@ class TypedDataUtils {
       if (!types.containsKey(dep)) {
         throw new ArgumentError('No type definition specified: ' + dep);
       }
-      result += dep +
-          '(' +
-          types[dep].map((field) => field.type + ' ' + field.name).join(',') +
-          ')';
+
+      var res = types[dep]?.map((field) => field.type + ' ' + field.name).join(',');
+      if(res != null) {
+        result += dep +'(' + res +')';
+      }
     });
     return result;
   }
@@ -232,17 +233,13 @@ class TypedDataUtils {
    * @returns {Array} - Set of all types found in the type definition
    */
   static List<String> findTypeDependencies(
-      String primaryType, Map<String, List<TypedDataField>> types,
-      {List<String> results}) {
-    if (results == null) {
-      results = List();
-    }
+      String primaryType, Map<String, List<TypedDataField>> types, List<String> results ) {
     if (results.indexOf(primaryType) >= 0 || !types.containsKey(primaryType)) {
       return results;
     }
     results.add(primaryType);
-    types[primaryType].forEach((TypedDataField field) {
-      findTypeDependencies(field.type, types, results: results).forEach((dep) {
+    types[primaryType]?.forEach((TypedDataField field) {
+      findTypeDependencies(field.type, types, results).forEach((dep) {
         if (results.indexOf(dep) == -1) {
           results.add(dep);
         }
@@ -252,7 +249,7 @@ class TypedDataUtils {
   }
 }
 
-final JsonSchema TYPED_MESSAGE_SCHEMA = JsonSchema.create(r'''
+final JsonSchema TYPED_MESSAGE_SCHEMA = JsonSchema.createSchema(r'''
 {
   "type": "object",
   "properties": {
