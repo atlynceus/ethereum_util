@@ -13,3 +13,16 @@ Porting Ethereum utilities from Javascript to Dart:
 - https://github.com/ethereumjs/ethereumjs-wallet
 
 Check [test](./test) folder for usage.
+
+## usage
+
+```text
+dependencies:
+  flutter:
+    sdk: flutter
+
+  ethereum_util:
+    git:
+      url: https://github.com/mickys/ethereum_util.git
+      ref: master
+```
