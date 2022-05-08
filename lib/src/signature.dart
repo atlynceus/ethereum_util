@@ -16,13 +16,15 @@ import 'package:pointycastle/key_generators/ec_key_generator.dart';
 import 'package:pointycastle/macs/hmac.dart';
 import 'package:pointycastle/pointycastle.dart';
 import 'package:pointycastle/signers/ecdsa_signer.dart';
+import 'package:pointycastle/digests/keccak.dart';
 
 final ECDomainParameters params = ECCurve_secp256k1();
 final BigInt _halfCurveOrder = params.n ~/ BigInt.two;
 
 const int _shaBytes = 256 ~/ 8;
-final SHA3Digest sha3digest = SHA3Digest(_shaBytes * 8);
-
+// final SHA3Digest sha3digest = SHA3Digest(_shaBytes * 8);
+/* https://github.com/bcgit/pc-dart/issues/93 */
+final KeccakDigest sha3digest = KeccakDigest(256);
 
 /// Signatures used to sign Ethereum transactions and messages.
 class ECDSASignature extends Equatable {

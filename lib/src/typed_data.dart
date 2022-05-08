@@ -252,7 +252,7 @@ class TypedDataUtils {
   }
 }
 
-final JsonSchema TYPED_MESSAGE_SCHEMA = JsonSchema.createSchema(r'''
+final JsonSchema TYPED_MESSAGE_SCHEMA = JsonSchema.create(r'''
 {
   "type": "object",
   "properties": {
