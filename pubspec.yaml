@@ -5,21 +5,22 @@ homepage: https://github.com/mickys/ethereum_util
 publish_to: none
 
 environment:
-  sdk: ">=2.16.2 <3.0.0"
+  sdk: ">=2.16.2"
+  flutter: ">=2.11.0"
 
 dependencies:
-  meta: 1.7.0
-  convert: 3.0.1
-  quiver: 3.1.0
-  pointycastle: 3.6.0
-  buffer: 1.1.1
-  equatable: 2.0.3
-  collection: 1.15.0
-  json_schema2: 2.0.2
-  json_annotation: 4.5.0
+  meta: ^1.7.0
+  convert: ^3.0.1
+  quiver: ^3.1.0
+  pointycastle: ^3.6.0
+  buffer: ^1.1.1
+  equatable: ^2.0.3
+  collection: ^1.15.0
+  json_schema2: ^2.0.2
+  json_annotation: ^4.5.0
 
 dev_dependencies:
-  build_runner: 2.1.10
-  json_serializable: 6.2.0
-  path: 1.8.1
-  test: 1.21.1
+  build_runner: ^2.1.10
+  json_serializable: ^6.2.0
+  path: ^1.8.1
+  test: ^1.21.1
